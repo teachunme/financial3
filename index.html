@@ -1,242 +1,163 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <link rel="manifest" href="manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>12月份個人財務管理系統</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --bg: #f5f6fa;
-            --card-bg: #ffffff;
-            --primary: #2d3436;
-            --accent: #0984e3;
-            --asset-color: #2ecc71;
-            --liability-color: #e74c3c;
-        }
-        body { font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); padding: 20px; color: var(--primary); }
+        :root { --bg: #f5f6fa; --card-bg: #ffffff; --primary: #2d3436; --accent: #0984e3; }
+        body { font-family: sans-serif; background: var(--bg); padding: 15px; color: var(--primary); }
         .container { max-width: 1200px; margin: 0 auto; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
-        
-        .month-selector { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; }
-        .month-btn { padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 20px; cursor: pointer; white-space: nowrap; font-weight: bold; }
-        .month-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-        .summary-box { background: var(--primary); color: white; padding: 15px; border-radius: 10px; text-align: center; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .summary-box { background: var(--primary); color: white; padding: 10px; border-radius: 8px; text-align: center; font-size: 0.9rem; }
         .summary-box.net { background: #10ac84; }
-        .summary-box .val { font-size: 1.5rem; font-weight: bold; margin-top: 5px; }
-
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 900px) { .dashboard { grid-template-columns: 1fr; } }
-
-        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .section-title { font-size: 1.2rem; font-weight: bold; color: var(--accent); margin-bottom: 15px; display: block; border-left: 5px solid var(--accent); padding-left: 10px; }
-        
+        .val { font-size: 1.1rem; font-weight: bold; display: block; margin-top: 5px; }
+        .month-selector { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; }
+        .month-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 15px; cursor: pointer; white-space: nowrap; }
+        .month-btn.active { background: var(--accent); color: white; }
+        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 8px; border-bottom: 1px solid #eee; text-align: left; }
-        input { 
-            width: 90%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: right; 
-            font-size: 1rem; font-weight: bold; color: #2d3436;
-        }
-
-        .chart-container { height: 300px; margin-top: 20px; display: flex; justify-content: center; }
-        .masked { filter: blur(6px); pointer-events: none; }
-        
-        .controls { display: flex; gap: 10px; }
-        .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; color: white; }
+        td { padding: 8px 0; border-bottom: 1px solid #eee; }
+        input { width: 80px; padding: 5px; text-align: right; border: 1px solid #ccc; border-radius: 4px; float: right; }
+        .btn-group { display: flex; gap: 5px; margin-bottom: 15px; }
+        .btn { padding: 10px; border: none; border-radius: 5px; color: white; cursor: pointer; flex: 1; font-weight: bold; }
         .btn-save { background: #0984e3; }
-        .btn-mask { background: #636e72; }
+        .btn-export { background: #6c5ce7; }
+        canvas { max-height: 250px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>個人財務 12 月份管理系統</h1>
-        <div class="controls">
-            <button class="btn btn-mask" onclick="toggleMask()">隱藏金額</button>
+        <h2 style="margin:0">財務管理 App</h2>
+        <div class="btn-group" style="width:100%">
             <button class="btn btn-save" onclick="saveData()">儲存資料</button>
+            <button class="btn btn-export" onclick="exportCSV()">下載報表(備份)</button>
         </div>
     </header>
 
     <div id="month-bar" class="month-selector"></div>
 
     <div class="summary-grid">
-        <div class="summary-box"><div>總資產</div><div id="disp-assets" class="val">0</div></div>
-        <div class="summary-box"><div>總負債/支出</div><div id="disp-liabilities" class="val">0</div></div>
-        <div class="summary-box net"><div>本月淨值</div><div id="disp-net" class="val">0</div></div>
+        <div class="summary-box">總資產<span id="disp-assets" class="val">0</span></div>
+        <div class="summary-box">總支出<span id="disp-liabilities" class="val">0</span></div>
+        <div class="summary-box net">淨資產<span id="disp-net" class="val">0</span></div>
     </div>
 
-    <div class="dashboard">
-        <!-- 資產輸入 -->
-        <div class="card">
-            <span class="section-title">資產明細 (Assets)</span>
-            <table>
-                <thead><tr><th>項目</th><th style="text-align:right">金額 (TWD)</th></tr></thead>
-                <tbody id="asset-body"></tbody>
-            </table>
-            <div class="chart-container">
-                <canvas id="assetChart"></canvas>
-            </div>
-        </div>
+    <div class="card">
+        <strong style="color:var(--accent)">資產明細</strong>
+        <table id="asset-table"></table>
+        <canvas id="assetChart"></canvas>
+    </div>
 
-        <!-- 負債輸入 -->
-        <div class="card">
-            <span class="section-title" style="color: #e17055; border-color: #e17055;">負債與支出 (Liabilities/Expenses)</span>
-            <table>
-                <thead><tr><th>項目</th><th style="text-align:right">金額 (TWD)</th></tr></thead>
-                <tbody id="liability-body"></tbody>
-            </table>
-            <div class="chart-container">
-                <canvas id="ratioChart"></canvas>
-            </div>
-        </div>
+    <div class="card">
+        <strong style="color:#e17055">負債與支出</strong>
+        <table id="liability-table"></table>
     </div>
 </div>
 
 <script>
     let currentMonth = 1;
-    let db = JSON.parse(localStorage.getItem('finance_db_v4')) || {};
-    let assetChart, ratioChart;
-
+    let db = JSON.parse(localStorage.getItem('finance_db_v5')) || {};
     const assetFields = ["銀行存款", "股票/基金", "不動產", "外幣資產", "其他收入1", "其他收入2", "其他收入3"];
     const liabilityFields = ["房貸", "信貸", "車貸", "各項稅支出", "保險支出", "娛樂支出", "其他支出1", "其他支出2", "其他支出3"];
-
-    // 國人平均預設值
-    const avgData = {
-        "銀行存款": 1200000, "股票/基金": 1500000, "不動產": 18000000, "外幣資產": 300000,
-        "房貸": 9500000, "信貸": 300000, "車貸": 400000, "各項稅支出": 50000, "保險支出": 80000, "娛樂支出": 30000
-    };
+    let assetChart;
 
     function init() {
-        // 生成月份按鈕
         const bar = document.getElementById('month-bar');
         for (let i = 1; i <= 12; i++) {
-            let btn = document.createElement('button');
-            btn.innerText = i + ' 月';
-            btn.className = 'month-btn' + (i === 1 ? ' active' : '');
-            btn.id = 'm-btn-' + i;
-            btn.onclick = () => switchMonth(i);
-            bar.appendChild(btn);
+            bar.innerHTML += `<button class="month-btn ${i==1?'active':''}" id="m-${i}" onclick="switchMonth(${i})">${i}月</button>`;
         }
-
-        renderTables();
-        setupCharts();
+        renderTable('asset-table', assetFields, 'asset-in');
+        renderTable('liability-table', liabilityFields, 'liability-in');
+        setupChart();
         loadMonthData();
-    }
-
-    function renderTables() {
-        const ab = document.getElementById('asset-body');
-        const lb = document.getElementById('liability-body');
         
-        assetFields.forEach(f => {
-            ab.innerHTML += `<tr><td>${f}</td><td><input type="text" class="asset-in" data-name="${f}" oninput="formatAndCalc(this)"></td></tr>`;
-        });
-        liabilityFields.forEach(f => {
-            lb.innerHTML += `<tr><td>${f}</td><td><input type="text" class="liability-in" data-name="${f}" oninput="formatAndCalc(this)"></td></tr>`;
-        });
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./service-worker.js');
+        }
     }
 
-    function formatAndCalc(el) {
-        // 只保留數字
-        let val = el.value.replace(/[^0-9]/g, '');
-        // 格式化為三位一逗號
-        el.value = val ? Number(val).toLocaleString() : '';
-        calculate();
-        updateCharts();
+    function renderTable(id, fields, cls) {
+        const table = document.getElementById(id);
+        fields.forEach(f => {
+            table.innerHTML += `<tr><td>${f}</td><td><input type="number" class="${cls}" data-name="${f}" oninput="calculate()"></td></tr>`;
+        });
     }
 
     function calculate() {
         let totalA = 0, totalL = 0;
-        document.querySelectorAll('.asset-in').forEach(i => totalA += Number(i.value.replace(/,/g, '')));
-        document.querySelectorAll('.liability-in').forEach(i => totalL += Number(i.value.replace(/,/g, '')));
-
+        document.querySelectorAll('.asset-in').forEach(i => totalA += Number(i.value || 0));
+        document.querySelectorAll('.liability-in').forEach(i => totalL += Number(i.value || 0));
         document.getElementById('disp-assets').innerText = totalA.toLocaleString();
         document.getElementById('disp-liabilities').innerText = totalL.toLocaleString();
         document.getElementById('disp-net').innerText = (totalA - totalL).toLocaleString();
+        updateChart(totalA);
     }
 
     function switchMonth(m) {
-        // 切換前先暫存當前資料到記憶體
         saveToMemory();
         currentMonth = m;
         document.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('m-btn-' + m).classList.add('active');
+        document.getElementById('m-'+m).classList.add('active');
         loadMonthData();
     }
 
     function saveToMemory() {
-        const monthData = {};
-        document.querySelectorAll('input').forEach(input => {
-            monthData[input.getAttribute('data-name')] = input.value.replace(/,/g, '');
-        });
-        db[currentMonth] = monthData;
+        const data = {};
+        document.querySelectorAll('input').forEach(i => data[i.dataset.name] = i.value);
+        db[currentMonth] = data;
     }
 
     function loadMonthData() {
-        const data = db[currentMonth];
-        document.querySelectorAll('input').forEach(input => {
-            const name = input.getAttribute('data-name');
-            if (data && data[name]) {
-                input.value = Number(data[name]).toLocaleString();
-            } else {
-                // 如果是全新月份且有預設值
-                input.value = avgData[name] ? avgData[name].toLocaleString() : "";
-            }
-        });
+        const data = db[currentMonth] || {};
+        document.querySelectorAll('input').forEach(i => i.value = data[i.dataset.name] || "");
         calculate();
-        updateCharts();
     }
 
     function saveData() {
         saveToMemory();
-        localStorage.setItem('finance_db_v4', JSON.stringify(db));
-        alert('12 月份資料已完整儲存至瀏覽器！');
+        localStorage.setItem('finance_db_v5', JSON.stringify(db));
+        alert('資料已鎖定在手機中！');
     }
 
-    function toggleMask() {
-        document.querySelectorAll('.val, input').forEach(el => el.classList.toggle('masked'));
+    function exportCSV() {
+        let csv = "月份,項目,金額\n";
+        for (let m = 1; m <= 12; m++) {
+            if (db[m]) {
+                Object.keys(db[m]).forEach(k => {
+                    csv += `${m}月,${k},${db[m][k]}\n`;
+                });
+            }
+        }
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "我的財務備份.csv";
+        link.click();
     }
 
-    function setupCharts() {
-        const assetCtx = document.getElementById('assetChart').getContext('2d');
-        assetChart = new Chart(assetCtx, {
-            type: 'pie',
-            data: {
-                labels: assetFields,
-                datasets: [{ backgroundColor: ['#2ecc71', '#3498db', '#f1c40f', '#e67e22', '#9b59b6', '#95a5a6', '#bdc3c7'], data: [] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        const ratioCtx = document.getElementById('ratioChart').getContext('2d');
-        ratioChart = new Chart(ratioCtx, {
+    function setupChart() {
+        const ctx = document.getElementById('assetChart').getContext('2d');
+        assetChart = new Chart(ctx, {
             type: 'doughnut',
-            data: {
-                labels: ['淨資產', '總負債'],
-                datasets: [{ backgroundColor: ['#10ac84', '#ee5253'], data: [] }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
+            data: { labels: ['資產', '負債'], datasets: [{ backgroundColor: ['#2ecc71', '#e74c3c'], data: [0, 0] }] }
         });
     }
 
-    function updateCharts() {
-        const assetVals = Array.from(document.querySelectorAll('.asset-in')).map(i => Number(i.value.replace(/,/g, '')));
-        assetChart.data.datasets[0].data = assetVals;
-        assetChart.update();
-
-        const totalA = assetVals.reduce((a, b) => a + b, 0);
+    function updateChart(totalA) {
         let totalL = 0;
-        document.querySelectorAll('.liability-in').forEach(i => totalL += Number(i.value.replace(/,/g, '')));
-        
-        ratioChart.data.datasets[0].data = [Math.max(0, totalA - totalL), totalL];
-        ratioChart.update();
+        document.querySelectorAll('.liability-in').forEach(i => totalL += Number(i.value || 0));
+        assetChart.data.datasets[0].data = [totalA, totalL];
+        assetChart.update();
     }
 
     window.onload = init;
 </script>
-
 </body>
 </html>
